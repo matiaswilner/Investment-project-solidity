@@ -41,6 +41,7 @@ contract SmartInvestment {
     struct Proposal {
         uint256 id;
         bool isOpen;
+        bool audited;
         string name;
         string description;
         uint256 minimumInvestment;
@@ -49,6 +50,11 @@ contract SmartInvestment {
 
     modifier isOwner() {
         require(owners[msg.sender].id != 0);
+        _;
+    }
+
+    modifier isAuditor() {
+        require(auditors[msg.sender].id != 0);
         _;
     }
 
@@ -102,6 +108,24 @@ contract SmartInvestment {
         }
         else {
             assert(false);
+        }
+    }
+
+    /*
+        REQUERIMIENTO PROPUESTAS 1, 3
+    */
+    function setStateProposal() public isOwner {
+        if (systemState == SystemState.Closed) {
+            systemState = SystemState.Proposal;
+        }
+    }
+
+    /*
+        REQUERIMIENTO PROPUESTAS 7
+    */
+    function validateProposal(uint256 proposalId) public isAuditor {
+        if (proposals[proposalId].id != 0) {    // Proposal existe
+            proposals[proposalId].audited = true;
         }
     }
 
