@@ -30,8 +30,22 @@ contract SmartInvestment {
         uint256 id;
     }
 
+    modifier isOwner() {
+        require(owners[msg.sender].id != 0);
+        _;
+    }
+
     constructor() {
         owners[msg.sender] = Owner(ownerIdsCounter);
+        ownerIdsCounter++;
+    }
+
+    /*
+        Solo un owner puede agregar otro owner, entonces
+        debemos usar el modifier isOwner.
+    */
+    function addOwner(address newOwnerAddress) public isOwner {
+        owners[newOwnerAddress] = Owner(ownerIdsCounter);
         ownerIdsCounter++;
     }
 
