@@ -20,6 +20,8 @@ contract SmartInvestment {
     mapping(address => Auditor) public auditors;
     mapping(address => Voter) public voters;
 
+    address[] votingCloseAuthorizationAuditors;
+
     struct Owner {
         uint256 id;
     }
@@ -54,11 +56,26 @@ contract SmartInvestment {
         _;
     }
 
+    modifier isVoter() {
+        require(voters[msg.sender].id != 0);
+        _;
+    }
+
     /*
         REQUERIMIENTO ROLES 8 Y 9
     */
     modifier enableProposal() {
         require(makerIdsCounter >= 3 && auditorIdsCounter >= 2);
+        _;
+    }
+
+    modifier proposalPeriod() {
+        require(systemState == SystemState.Proposal);
+        _;
+    }
+
+    modifier votingPeriod() {
+        require(systemState == SystemState.Voting);
         _;
     }
 
@@ -73,7 +90,7 @@ contract SmartInvestment {
         Solo un owner puede agregar otro owner, entonces
         debemos usar el modifier isOwner.
     */
-    function addOwner(address newOwnerAddress) public isOwner {
+    function addOwner(address newOwnerAddress) external isOwner {
         owners[newOwnerAddress] = Owner(ownerIdsCounter);
         ownerIdsCounter++;
     }
@@ -83,12 +100,12 @@ contract SmartInvestment {
         Solo los owners podrán registrar makers, entonces
         debemos usar el modifier isOwner
     */
-    function addMaker(address newMakerAddress, string memory name, string memory country, string memory passportNumber) public isOwner {
+    function addMaker(address newMakerAddress, string memory name, string memory country, string memory passportNumber) external isOwner {
         makers[newMakerAddress] = Maker(makerIdsCounter, name, country, passportNumber);
         makerIdsCounter++;
     }
 
-    function switchState() public isOwner {
+    function switchState() external isOwner {
         if (systemState == SystemState.Proposal) {
             setStateVoting();
         } else if (systemState == SystemState.Closed) {
@@ -130,13 +147,28 @@ contract SmartInvestment {
     }
 
     function setStateClosed() internal {
-        // TODO
+        uint256 totalBalance = 0;
+        for(uint256 i = 1; i < proposalIdsCounter && totalBalance <= 50 ether; i++) {
+            if(Proposal(proposals[i]).getIsOpen()){
+                totalBalance += address(proposals[i]).balance;
+            }
+        }
+        bool auditorsAuthorization = votingCloseAuthorizationAuditors[0] != address(0) && votingCloseAuthorizationAuditors[1] != address(0);
+        if (totalBalance >= 50 ether && auditorsAuthorization) {
+            systemState = SystemState.Closed;
+            votingCloseAuthorizationAuditors[0] = address(0);
+            votingCloseAuthorizationAuditors[1] = address(0);
+            address proposalWinner = getProposalWinner();
+        } else {
+            assert(false);
+        }
+        
     }
 
     /*
         REQUERIMIENTO PROPUESTAS 7
     */
-    function validateProposal(uint256 proposalId) public isAuditor {
+    function validateProposal(uint256 proposalId) external isAuditor {
         if (proposals[proposalId] != address(0)) {    // Proposal existe
             Proposal(proposals[proposalId]).setAudited();
         }
@@ -145,15 +177,44 @@ contract SmartInvestment {
     /*
         REQUERIMIENTO ROLES 7
     */
-    function createProposal(string memory name, string memory description, uint256 minimumInvestment) public isMaker {
-        if (systemState == SystemState.Proposal) {
-            proposals[proposalIdsCounter] = new Proposal(proposalIdsCounter, false, false, name, description, minimumInvestment, makers[msg.sender].id);
-            proposalIdsCounter++;
-            
+    function createProposal(string memory name, string memory description, uint256 minimumInvestment) external isMaker proposalPeriod {
+        proposals[proposalIdsCounter] = new Proposal(proposalIdsCounter, false, false, name, description, minimumInvestment, makers[msg.sender].id);
+        proposalIdsCounter++;
+    }
+
+    function authorizeCloseVoting() external isAuditor {
+        if (votingCloseAuthorizationAuditors[0] == address(0)) {
+            votingCloseAuthorizationAuditors[0] = msg.sender;
+        } else {
+            if (votingCloseAuthorizationAuditors[0] != msg.sender) {
+                votingCloseAuthorizationAuditors[1] = msg.sender;
+            } else {
+                assert(false);
+            }
+        }
+        
+    }
+
+    function vote(uint256 proposalId) external payable isVoter votingPeriod {
+        if(message.value >= 5 ether){
+            proposals[proposalId].transfer(message.value);
+            Proposal(proposals[proposalId]).addVote();
         } else {
             assert(false);
         }
-        
+        // WARNING: validar que la proposalId existe
+    }
+
+    function getProposalWinner() internal returns(address){
+        address winner = proposals[1];
+        for (uint256 i=2; i < proposalIdsCounter; i++) {
+            if (proposals[i].balance > winner.balance) {
+                winner = proposals[i];
+            } else if (proposals[i].balance == winner.balance && proposals[i].getVotes() > winner.getVotes()) {
+                winner = proposals[i];
+            }
+        }
+        return winner;
     }
 
 }

@@ -6,6 +6,7 @@ contract Proposal {
     string _description;
     uint256 _minimumInvestment;
     uint256 _maker;
+    uint256 _votes;
 
     constructor(uint256 id, bool isOpen, bool audited, string memory name, string memory description, uint256 minimumInvestment, uint256 maker){
         _id = id;
@@ -27,5 +28,13 @@ contract Proposal {
 
     function setAudited() external {
         _audited = true;
+    }
+
+    function addVote() external {
+        _votes++;
+    }
+
+    function getVotes() external view returns(uint256) {
+        return _votes;
     }
 }
