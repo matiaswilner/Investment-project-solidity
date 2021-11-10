@@ -1,4 +1,11 @@
+//SPDX-License-Identifier: UNLICENSED
+
+pragma solidity ^0.8.9;
+import "./Proposal.sol";
+
 contract Proposal {
+
+    // Ponerlas public, no hacer getters y setters
     uint256 _id;
     bool _isOpen;
     bool _audited;

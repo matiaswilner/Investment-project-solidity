@@ -6,7 +6,7 @@ import "./Proposal.sol";
 contract SmartInvestment {
 
     enum SystemState { Closed, Proposal, Voting }
-    SystemState public systemState;
+    SystemState public systemState; // Estado actual del sistema
 
     uint256 proposalIdsCounter = 1;
     uint256 ownerIdsCounter = 1;
@@ -15,9 +15,9 @@ contract SmartInvestment {
     uint256 voterIdsCounter = 1;
 
     mapping(uint256 => address payable) public proposals;
-    mapping(address => Owner) public owners;
+    mapping(address => Owner) public owners;    // Si no usamos para nada el id, cambiar Owner por bool.
     mapping(address => Maker) public makers;
-    mapping(address => Auditor) public auditors;
+    mapping(address => Auditor) public auditors;    // Si no usamos para nada el id, cambiar Owner por bool.
     mapping(address => Voter) public voters;
 
     address[] votingCloseAuthorizationAuditors;
@@ -57,9 +57,12 @@ contract SmartInvestment {
     }
 
     modifier isVoter() {
+        // Verificar que no esté en el mapping de Owners, Makers u Auditors (modificar⚠️⚠️⚠️⚠️⚠️⚠️)
         require(voters[msg.sender].id != 0);
         _;
     }
+
+    // HACER un isSmartInvestment modifier
 
     /*
         REQUERIMIENTO ROLES 8 Y 9
@@ -100,7 +103,8 @@ contract SmartInvestment {
         Solo los owners podrán registrar makers, entonces
         debemos usar el modifier isOwner
     */
-    function addMaker(address newMakerAddress, string memory name, string memory country, string memory passportNumber) external isOwner {
+    // Al usar memory tiene costo extra, para ahorrar gas, puedo usar calldata (readonly, mas barato)
+    function addMaker(address newMakerAddress, string calldata name, string calldata country, string calldata passportNumber) external isOwner {
         makers[newMakerAddress] = Maker(makerIdsCounter, name, country, passportNumber);
         makerIdsCounter++;
     }
@@ -113,7 +117,7 @@ contract SmartInvestment {
         } else if (systemState == SystemState.Voting) {
             setStateClosed();
         } else {
-            assert(false);
+            assert(false);  // Cuidado con el tema del gasto. assert(false) consume toodo el gas, PREFERIBLE USAR REVERT!!⚠️⚠️⚠️⚠️
         }
     }
 
@@ -147,6 +151,7 @@ contract SmartInvestment {
     }
 
     function setStateClosed() internal {
+        // Tenemos que ver como ajustar la logica porque hacemos delete de proposal
         uint256 totalBalance = 0;
         for(uint256 i = 1; i < proposalIdsCounter && totalBalance <= 50 ether; i++) {
             if(Proposal(proposals[i]).getIsOpen()){
@@ -156,8 +161,8 @@ contract SmartInvestment {
         bool auditorsAuthorization = votingCloseAuthorizationAuditors[0] != address(0) && votingCloseAuthorizationAuditors[1] != address(0);
         if (totalBalance >= 50 ether && auditorsAuthorization) {
             systemState = SystemState.Closed;
-            votingCloseAuthorizationAuditors[0] = address(0);
-            votingCloseAuthorizationAuditors[1] = address(0);
+            delete votingCloseAuthorizationAuditors[0];
+            delete votingCloseAuthorizationAuditors[1];
             address proposalWinner = getProposalWinner();
             // QUEDAMOS ACÁ??? ⚠️❓❔❓❔🤔
         } else {
@@ -178,7 +183,7 @@ contract SmartInvestment {
     /*
         REQUERIMIENTO ROLES 7
     */
-    function createProposal(string memory name, string memory description, uint256 minimumInvestment) external isMaker proposalPeriod {
+    function createProposal(string calldata name, string calldata description, uint256 minimumInvestment) external isMaker proposalPeriod {
         //proposals[proposalIdsCounter] = 
         Proposal newProposal = new Proposal(proposalIdsCounter, false, false, name, description, minimumInvestment, makers[msg.sender].id);
         address payable newProposalAddress = payable(address(newProposal));
@@ -200,15 +205,13 @@ contract SmartInvestment {
     }
 
     function vote(uint256 proposalId) external payable isVoter votingPeriod {
-        if(msg.value >= 5 ether){
-            proposals[proposalId].transfer(msg.value);
-            Proposal(proposals[proposalId]).addVote();
-        } else {
-            assert(false);
-        }
-        // WARNING: validar que la proposalId existe
+        require(msg.value >= 5 ether);
+        proposals[proposalId].transfer(msg.value);
+        Proposal(proposals[proposalId]).addVote();
+        // WARNING: validar que la proposalId existe ⚠️⚠️⚠️⚠️⚠️
     }
 
+    // Documentar que lo resolvimos así y como lo resolvimos
     function getProposalWinner() internal view returns(address){
         address winner = proposals[1];
         for (uint256 i=2; i < proposalIdsCounter; i++) {
