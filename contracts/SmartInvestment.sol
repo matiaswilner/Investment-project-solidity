@@ -14,7 +14,7 @@ contract SmartInvestment {
     uint256 auditorIdsCounter = 1;
     uint256 voterIdsCounter = 1;
 
-    mapping(uint256 => address) public proposals;
+    mapping(uint256 => address payable) public proposals;
     mapping(address => Owner) public owners;
     mapping(address => Maker) public makers;
     mapping(address => Auditor) public auditors;
@@ -159,6 +159,7 @@ contract SmartInvestment {
             votingCloseAuthorizationAuditors[0] = address(0);
             votingCloseAuthorizationAuditors[1] = address(0);
             address proposalWinner = getProposalWinner();
+            // QUEDAMOS ACÁ??? ⚠️❓❔❓❔🤔
         } else {
             assert(false);
         }
@@ -178,7 +179,10 @@ contract SmartInvestment {
         REQUERIMIENTO ROLES 7
     */
     function createProposal(string memory name, string memory description, uint256 minimumInvestment) external isMaker proposalPeriod {
-        proposals[proposalIdsCounter] = new Proposal(proposalIdsCounter, false, false, name, description, minimumInvestment, makers[msg.sender].id);
+        //proposals[proposalIdsCounter] = 
+        Proposal newProposal = new Proposal(proposalIdsCounter, false, false, name, description, minimumInvestment, makers[msg.sender].id);
+        address payable newProposalAddress = payable(address(newProposal));
+        proposals[proposalIdsCounter] = newProposalAddress;
         proposalIdsCounter++;
     }
 
@@ -196,8 +200,8 @@ contract SmartInvestment {
     }
 
     function vote(uint256 proposalId) external payable isVoter votingPeriod {
-        if(message.value >= 5 ether){
-            proposals[proposalId].transfer(message.value);
+        if(msg.value >= 5 ether){
+            proposals[proposalId].transfer(msg.value);
             Proposal(proposals[proposalId]).addVote();
         } else {
             assert(false);
@@ -205,12 +209,12 @@ contract SmartInvestment {
         // WARNING: validar que la proposalId existe
     }
 
-    function getProposalWinner() internal returns(address){
+    function getProposalWinner() internal view returns(address){
         address winner = proposals[1];
         for (uint256 i=2; i < proposalIdsCounter; i++) {
             if (proposals[i].balance > winner.balance) {
                 winner = proposals[i];
-            } else if (proposals[i].balance == winner.balance && proposals[i].getVotes() > winner.getVotes()) {
+            } else if (proposals[i].balance == winner.balance && Proposal(proposals[i]).getVotes() > Proposal(winner).getVotes()) {
                 winner = proposals[i];
             }
         }
