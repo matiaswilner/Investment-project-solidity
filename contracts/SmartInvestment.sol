@@ -9,20 +9,15 @@ contract SmartInvestment {
     SystemState public systemState; // Estado actual del sistema
 
     uint256 proposalIdsCounter = 1;
-    uint256 ownerIdsCounter = 1;
     uint256 makerIdsCounter = 1;
     uint256 auditorIdsCounter = 1;
 
     mapping(uint256 => address payable) public proposals;
-    mapping(address => Owner) public owners;    // Si no usamos para nada el id, cambiar Owner por bool.
+    mapping(address => bool) public owners;
     mapping(address => Maker) public makers;
-    mapping(address => Auditor) public auditors;    // Si no usamos para nada el id, cambiar Owner por bool.
+    mapping(address => bool) public auditors;
 
     address[] votingCloseAuthorizationAuditors;
-
-    struct Owner {
-        uint256 id;
-    }
 
     struct Maker {
         uint256 id;
@@ -31,17 +26,13 @@ contract SmartInvestment {
         string passportNumber;
     }
 
-    struct Auditor {
-        uint256 id;
-    }
-
     modifier isOwner() {
-        require(owners[msg.sender].id != 0);
+        require(owners[msg.sender] == true);
         _;
     }
 
     modifier isAuditor() {
-        require(auditors[msg.sender].id != 0);
+        require(auditors[msg.sender] == true);
         _;
     }
 
@@ -53,8 +44,8 @@ contract SmartInvestment {
     
     modifier isVoter() {
         // Verificar que no esté en el mapping de Owners, Makers u Auditors (modificar⚠️⚠️⚠️⚠️⚠️⚠️)
-        require(owners[msg.sender].id == 0);
-        require(auditors[msg.sender].id == 0);
+        require(owners[msg.sender] == false);
+        require(auditors[msg.sender] == false);
         require(makers[msg.sender].id == 0);
         _;
     }
@@ -80,8 +71,7 @@ contract SmartInvestment {
     }
 
     constructor() {
-        owners[msg.sender] = Owner(ownerIdsCounter);
-        ownerIdsCounter++;
+        owners[msg.sender] = true;
         systemState = SystemState.Closed;
     }
 
@@ -91,8 +81,7 @@ contract SmartInvestment {
         debemos usar el modifier isOwner.
     */
     function addOwner(address newOwnerAddress) external isOwner {
-        owners[newOwnerAddress] = Owner(ownerIdsCounter);
-        ownerIdsCounter++;
+        owners[newOwnerAddress] = true;
     }
 
     /*
@@ -114,7 +103,7 @@ contract SmartInvestment {
         } else if (systemState == SystemState.Voting) {
             setStateClosed();
         } else {
-            assert(false);  // Cuidado con el tema del gasto. assert(false) consume toodo el gas, PREFERIBLE USAR REVERT!!⚠️⚠️⚠️⚠️
+            revert();  // Cuidado con el tema del gasto. assert(false) consume toodo el gas, PREFERIBLE USAR REVERT!!⚠️⚠️⚠️⚠️
         }
     }
 
@@ -132,11 +121,11 @@ contract SmartInvestment {
                 systemState = SystemState.Voting;
             }
             else {
-                assert(false);
+                revert();
             }
         }
         else {
-            assert(false);
+            revert();
         }
     }
 
@@ -162,8 +151,16 @@ contract SmartInvestment {
             delete votingCloseAuthorizationAuditors[1];
             address proposalWinner = getProposalWinner();
             // QUEDAMOS ACÁ??? ⚠️❓❔❓❔🤔
+            /*
+                1 - Transferir 10% del balance de TODOS los contratos al contrato SmartInvestment. (comision)
+                2 - Asignar la plata restante de los contratos perdedores al ganador.
+                3 - Destruir los contratos perdedores. (Usar SELF DESTRUCT y ver como es (puede estar en las clases del 27/oct o 20/oct))
+                4 - Asignar la propiedad del contrato ganador a su owner.
+
+                El contrato ganador en el caso de que haya un empate de votos (por = cantidad de ethers), puede ser cualquiera de los dos.
+            */
         } else {
-            assert(false);
+            revert();
         }
         
     }
@@ -195,12 +192,19 @@ contract SmartInvestment {
             if (votingCloseAuthorizationAuditors[0] != msg.sender) {
                 votingCloseAuthorizationAuditors[1] = msg.sender;
             } else {
-                assert(false);
+                revert();
             }
         }
         
     }
 
+    /* 
+        🧠🧠🧠🧠🧠🧠
+        DOCUMENTAR que lo hicimos así para evitar llamar de un contrato al otro, ya que si
+        estuviera esta func en Proposal deberiamos llamar aca para preguntar por el votingPeriod y
+        si es o no voter el address, además de que un usuario tendría que llamr previamente a
+        una func en SmartInvestment para saber el address de un contrato que no conoce (conocería sólo su Id)
+    */
     function vote(uint256 proposalId) external payable isVoter votingPeriod {
         require(msg.value >= 5 ether);
         proposals[proposalId].transfer(msg.value);

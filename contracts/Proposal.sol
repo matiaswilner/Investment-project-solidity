@@ -6,16 +6,19 @@ import "./Proposal.sol";
 contract Proposal {
 
     // Ponerlas public, no hacer getters y setters
-    uint256 _id;
-    bool _isOpen;
-    bool _audited;
-    string _name;
-    string _description;
-    uint256 _minimumInvestment;
-    uint256 _maker;
-    uint256 _votes;
+    address private _owner;
+
+    uint256 public _id;
+    bool public _isOpen;
+    bool public _audited;
+    string public _name;
+    string public _description;
+    uint256 public _minimumInvestment;
+    uint256 public _maker;
+    uint256 public _votes;
 
     constructor(uint256 id, bool isOpen, bool audited, string memory name, string memory description, uint256 minimumInvestment, uint256 maker){
+        _owner = msg.sender;
         _id = id;
         _isOpen = isOpen;
         _audited = audited;
@@ -23,6 +26,19 @@ contract Proposal {
         _description = description;
         _minimumInvestment = minimumInvestment;
         _maker = maker;
+    }
+
+    modifier isOwner() {
+        require(_owner == msg.sender);
+        _;
+    }
+
+    function transferProperty(address newOwnerAddress) external isOwner {
+        _owner = newOwnerAddress;
+    }
+
+    function transferFunds() external isOwner {
+        payable(_owner).transfer(address(this).balance);
     }
 
     function getIsOpen() external view returns(bool) {
