@@ -12,13 +12,11 @@ contract SmartInvestment {
     uint256 ownerIdsCounter = 1;
     uint256 makerIdsCounter = 1;
     uint256 auditorIdsCounter = 1;
-    uint256 voterIdsCounter = 1;
 
     mapping(uint256 => address payable) public proposals;
     mapping(address => Owner) public owners;    // Si no usamos para nada el id, cambiar Owner por bool.
     mapping(address => Maker) public makers;
     mapping(address => Auditor) public auditors;    // Si no usamos para nada el id, cambiar Owner por bool.
-    mapping(address => Voter) public voters;
 
     address[] votingCloseAuthorizationAuditors;
 
@@ -37,10 +35,6 @@ contract SmartInvestment {
         uint256 id;
     }
 
-    struct Voter {
-        uint256 id;
-    }
-
     modifier isOwner() {
         require(owners[msg.sender].id != 0);
         _;
@@ -56,9 +50,12 @@ contract SmartInvestment {
         _;
     }
 
+    
     modifier isVoter() {
         // Verificar que no esté en el mapping de Owners, Makers u Auditors (modificar⚠️⚠️⚠️⚠️⚠️⚠️)
-        require(voters[msg.sender].id != 0);
+        require(owners[msg.sender].id == 0);
+        require(auditors[msg.sender].id == 0);
+        require(makers[msg.sender].id == 0);
         _;
     }
 
