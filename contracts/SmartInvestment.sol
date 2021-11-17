@@ -140,16 +140,12 @@ contract SmartInvestment {
             for(uint256 i = 1; i < proposalIdsCounter; i++){
                 Proposal(proposals[i]).transferTenPercent();
                 if(proposals[i] != proposalWinner){
-                    // OPCION 1
-                    Proposal(proposals[i]).transferFunds(proposalWinner);
-                    Proposal(proposals[i]).selfDestruct(proposalWinner);
-                    // OPCION 2
                     Proposal(proposals[i]).transferFundsAndSelfDestroy(proposalWinner);
                 }
             }
             Proposal proposalWinnerObject = Proposal(proposalWinner);
             emit DeclareWinningProposalEvent(proposalWinner, proposalWinnerObject._maker(), proposalWinnerObject._minimumInvestment());
-            proposalWinnerObject.transferProperty(proposalWinnerObject._maker());
+            proposalWinnerObject.transferPropertyToMaker();
             proposalIdsCounter = 1;
             // Que onda esto? El ._maker ya es un address.. Hay que ponerle el payable en algun lado para transferir la propiedad del contrato?
 
@@ -209,7 +205,10 @@ contract SmartInvestment {
         DOCUMENTAR que lo hicimos así para evitar llamar de un contrato al otro, ya que si
         estuviera esta func en Proposal deberiamos llamar aca para preguntar por el votingPeriod y
         si es o no voter el address, además de que un usuario tendría que llamr previamente a
-        una func en SmartInvestment para saber el address de un contrato que no conoce (conocería sólo su Id)
+        una func en SmartInvestment para saber el address de un contrato que no conoce (conocería sólo su Id).
+
+        DEBE ESTAR SIII O SIII EN PROPOSAL y HACER TODDO ESO DE LA LLAMADA EN CONTRATO
+        Desde la propuesta perguntar si esta abierto, sino hace revert, ademas de erificar que no sea un maker ni owner ni auditor.
     */
     function vote(uint256 proposalId) external payable isVoter votingPeriod {
         require(msg.value >= 5 ether);

@@ -33,17 +33,8 @@ contract Proposal {
         _;
     }
 
-    function transferProperty(address newOwnerAddress) external isOwner {
-        _owner = newOwnerAddress;
-    }
-
-    // OPCION 1
-    function transferFunds(address destinationAddress) external isOwner {
-        payable(destinationAddress).transfer(address(this).balance);
-    }
-
-    function selfDestruct(address destinationAddress) external isOwner {
-        selfdestruct(payable(destinationAddress));
+    function transferPropertyToMaker() external isOwner {
+        _owner = _maker;
     }
 
     // OPCION 2  
@@ -55,6 +46,8 @@ contract Proposal {
         uint256 tenPercent = address(this).balance / 10;
         payable(_owner).transfer(tenPercent);
     }
+
+    // BORRAR LOS GET
 
     function getIsOpen() external view returns(bool) {
         return _isOpen;
