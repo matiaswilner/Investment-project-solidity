@@ -111,22 +111,9 @@ contract SmartInvestment {
         REQUERIMIENTO PROPUESTAS 2, 4
     */
     function setStateVoting() internal {
-        uint256 lastProposalId = proposalIdsCounter - 1;
-        uint256 lastProposalId2 = lastProposalId - 1;
-        if (lastProposalId > 0 && lastProposalId2 > 0) {
-            Proposal proposal1 = Proposal(proposals[lastProposalId]);
-            Proposal proposal2 = Proposal(proposals[lastProposalId2]);
-            if (proposal1.getIsOpen() && proposal2.getIsOpen()) {
-                // 🤔 Hay q cerrar las dos propuestas??
-                systemState = SystemState.Voting;
-            }
-            else {
-                revert();
-            }
-        }
-        else {
-            revert();
-        }
+        require(proposalIdsCounter > 1);
+        systemState = SystemState.Voting;
+        //makerIdsCounter = 1; - PREGUNTAR ESTO
     }
 
     /*
@@ -140,9 +127,7 @@ contract SmartInvestment {
         // Tenemos que ver como ajustar la logica porque hacemos delete de proposal
         uint256 totalBalance = 0;
         for(uint256 i = 1; i < proposalIdsCounter && totalBalance <= 50 ether; i++) {
-            if(Proposal(proposals[i]).getIsOpen()){
-                totalBalance += address(proposals[i]).balance;
-            }
+            totalBalance += address(proposals[i]).balance;
         }
         bool auditorsAuthorization = votingCloseAuthorizationAuditors[0] != address(0) && votingCloseAuthorizationAuditors[1] != address(0);
         if (totalBalance >= 50 ether && auditorsAuthorization) {
@@ -150,6 +135,20 @@ contract SmartInvestment {
             delete votingCloseAuthorizationAuditors[0];
             delete votingCloseAuthorizationAuditors[1];
             address proposalWinner = getProposalWinner();
+            for(uint256 i = 1; i < proposalIdsCounter; i++){
+                Proposal(proposals[i]).transferTenPercent();
+                if(proposals[i] != proposalWinner){
+                    // OPCION 1
+                    Proposal(proposals[i]).transferFunds(proposalWinner);
+                    Proposal(proposals[i]).selfDestruct(proposalWinner);
+                    // OPCION 2
+                    Proposal(proposals[i]).transferFundsAndSelfDestroy(proposalWinner);
+                }
+            }
+            Proposal(proposalWinner).transferProperty(Proposal(proposalWinner)._maker.address);
+            proposalIdsCounter = 1;
+            // Que onda esto? El ._maker ya es un address.. Hay que ponerle el payable en algun lado para transferir la propiedad del contrato?
+
             // QUEDAMOS ACÁ??? ⚠️❓❔❓❔🤔
             /*
                 1 - Transferir 10% del balance de TODOS los contratos al contrato SmartInvestment. (comision)
@@ -170,7 +169,10 @@ contract SmartInvestment {
     */
     function validateProposal(uint256 proposalId) external isAuditor {
         if (proposals[proposalId] != address(0)) {    // Proposal existe
+            // OPCION 1
             Proposal(proposals[proposalId]).setAudited();
+            // OPCION 2 - En caso de borrar la funcion Proposal.setAudited()
+            //Proposal(proposals[proposalId])._audited = true;
         }
     }
 
@@ -179,7 +181,7 @@ contract SmartInvestment {
     */
     function createProposal(string calldata name, string calldata description, uint256 minimumInvestment) external isMaker proposalPeriod {
         //proposals[proposalIdsCounter] = 
-        Proposal newProposal = new Proposal(proposalIdsCounter, false, false, name, description, minimumInvestment, makers[msg.sender].id);
+        Proposal newProposal = new Proposal(proposalIdsCounter, false, false, name, description, minimumInvestment, msg.sender);
         address payable newProposalAddress = payable(address(newProposal));
         proposals[proposalIdsCounter] = newProposalAddress;
         proposalIdsCounter++;
@@ -207,9 +209,12 @@ contract SmartInvestment {
     */
     function vote(uint256 proposalId) external payable isVoter votingPeriod {
         require(msg.value >= 5 ether);
+        require(proposalId > 0 && proposalId < proposalIdsCounter);
         proposals[proposalId].transfer(msg.value);
         Proposal(proposals[proposalId]).addVote();
-        // WARNING: validar que la proposalId existe ⚠️⚠️⚠️⚠️⚠️
+        // OPCION 2
+        //Proposal(proposals[proposalId])._votes++;
+        // WARNING: validar que la proposalId existe ⚠️⚠️⚠️⚠️⚠️ - HECHO
     }
 
     // Documentar que lo resolvimos así y como lo resolvimos

@@ -14,10 +14,10 @@ contract Proposal {
     string public _name;
     string public _description;
     uint256 public _minimumInvestment;
-    uint256 public _maker;
+    address public _maker;
     uint256 public _votes;
 
-    constructor(uint256 id, bool isOpen, bool audited, string memory name, string memory description, uint256 minimumInvestment, uint256 maker){
+    constructor(uint256 id, bool isOpen, bool audited, string memory name, string memory description, uint256 minimumInvestment, address maker){
         _owner = msg.sender;
         _id = id;
         _isOpen = isOpen;
@@ -37,8 +37,23 @@ contract Proposal {
         _owner = newOwnerAddress;
     }
 
-    function transferFunds() external isOwner {
-        payable(_owner).transfer(address(this).balance);
+    // OPCION 1
+    function transferFunds(address destinationAddress) external isOwner {
+        payable(destinationAddress).transfer(address(this).balance);
+    }
+
+    function selfDestruct(address destinationAddress) external isOwner {
+        selfdestruct(payable(destinationAddress));
+    }
+
+    // OPCION 2  
+    function transferFundsAndSelfDestroy(address destinationAddress) external isOwner {
+        selfdestruct(payable(destinationAddress));
+    }
+
+    function transferTenPercent() external isOwner {
+        uint256 tenPercent = address(this).balance / 10;
+        payable(_owner).transfer(tenPercent);
     }
 
     function getIsOpen() external view returns(bool) {
