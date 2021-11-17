@@ -8,6 +8,8 @@ contract SmartInvestment {
     enum SystemState { Closed, Proposal, Voting }
     SystemState public systemState; // Estado actual del sistema
 
+    event DeclareWinningProposalEvent(address proposalAddress, address maker, uint256 minimumInvestment);
+
     uint256 proposalIdsCounter = 1;
     uint256 makerIdsCounter = 1;
     uint256 auditorIdsCounter = 1;
@@ -145,7 +147,9 @@ contract SmartInvestment {
                     Proposal(proposals[i]).transferFundsAndSelfDestroy(proposalWinner);
                 }
             }
-            Proposal(proposalWinner).transferProperty(Proposal(proposalWinner)._maker.address);
+            Proposal proposalWinnerObject = Proposal(proposalWinner);
+            emit DeclareWinningProposalEvent(proposalWinner, proposalWinnerObject._maker(), proposalWinnerObject._minimumInvestment());
+            proposalWinnerObject.transferProperty(proposalWinnerObject._maker());
             proposalIdsCounter = 1;
             // Que onda esto? El ._maker ya es un address.. Hay que ponerle el payable en algun lado para transferir la propiedad del contrato?
 
