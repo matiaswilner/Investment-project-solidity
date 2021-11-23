@@ -6,7 +6,7 @@ import "./SmartInvestment.sol";
 contract Proposal {
 
     // Ponerlas public, no hacer getters y setters
-    address private _owner;
+    address payable private _owner;
 
     uint256 public _id;
     bool public _isOpen;
@@ -14,18 +14,18 @@ contract Proposal {
     string public _name;
     string public _description;
     uint256 public _minimumInvestment;
-    address public _maker;
+    address payable public _maker;
     uint256 public _votes;
 
     constructor(uint256 id, bool isOpen, bool audited, string memory name, string memory description, uint256 minimumInvestment, address maker){
-        _owner = msg.sender;
+        _owner = payable(msg.sender);
         _id = id;
         _isOpen = isOpen;
         _audited = audited;
         _name = name;
         _description = description;
         _minimumInvestment = minimumInvestment;
-        _maker = maker;
+        _maker = payable(maker);
     }
 
     modifier isOwner() {
@@ -38,13 +38,13 @@ contract Proposal {
     }
 
     // OPCION 2  
-    function transferFundsAndSelfDestroy(address destinationAddress) external isOwner {
+    function transferFundsAndSelfDestroy(address destinationAddress) payable external isOwner {
         selfdestruct(payable(destinationAddress));
     }
 
-    function transferTenPercent() external isOwner {
-        uint256 tenPercent = address(this).balance / 10;
-        payable(_owner).transfer(tenPercent);
+    function transferTenPercent() external payable isOwner {
+        uint256 tenPercent = (address(this).balance/10);
+        _owner.transfer(tenPercent);
     }
 
     /* 
