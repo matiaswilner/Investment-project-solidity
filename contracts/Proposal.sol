@@ -58,7 +58,6 @@ contract Proposal {
         require(msg.value >= 5 ether);
         require(SmartInvestment(_owner).isVotingPeriod());
         require(SmartInvestment(_owner).isVoter(msg.sender));
-        payable(address(this)).transfer(msg.value);
         _votes++;
     }
 

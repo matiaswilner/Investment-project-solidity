@@ -99,6 +99,11 @@ contract SmartInvestment {
         makerIdsCounter++;
     }
 
+    function addAuditor(address newAuditorAddress) external {
+        auditors[newAuditorAddress] = true;
+        auditorIdsCounter++;
+    }
+
     function switchState() external isOwner {
         if (systemState == SystemState.Proposal) {
             setStateVoting();
