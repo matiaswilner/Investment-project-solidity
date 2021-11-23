@@ -42,9 +42,12 @@ contract Proposal {
         selfdestruct(payable(destinationAddress));
     }
 
-    function transferTenPercent() external payable isOwner {
+    function transferTenPercent() external isOwner {
         uint256 tenPercent = (address(this).balance/10);
-        _owner.transfer(tenPercent);
+        bool transfered = payable(_owner).send(tenPercent);
+        if (!transfered) {
+            revert("No fueron transferidos!");
+        }
     }
 
     /* 

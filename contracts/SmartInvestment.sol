@@ -5,6 +5,8 @@ import "./Proposal.sol";
 
 contract SmartInvestment {
 
+    receive() external payable {}
+
     enum SystemState { Closed, Proposal, Voting }
     SystemState public systemState; // Estado actual del sistema
 
