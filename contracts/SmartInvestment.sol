@@ -146,9 +146,10 @@ contract SmartInvestment {
         delete votingCloseAuthorizationAuditors[0];
         delete votingCloseAuthorizationAuditors[1];
         address proposalWinner = getProposalWinner();
+        Proposal(proposalWinner).transferTenPercent();
         for(uint256 i = 1; i < proposalIdsCounter; i++){
-            Proposal(proposals[i]).transferTenPercent();
             if(proposals[i] != proposalWinner){
+                Proposal(proposals[i]).transferTenPercent();
                 Proposal(proposals[i]).transferFundsAndSelfDestroy(proposalWinner);
             }
         }
