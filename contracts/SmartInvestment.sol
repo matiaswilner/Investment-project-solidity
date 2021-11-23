@@ -29,17 +29,17 @@ contract SmartInvestment {
     }
 
     modifier isOwner() {
-        require(owners[msg.sender] == true);
+        require(owners[msg.sender] == true, "No es owner");
         _;
     }
 
     modifier isAuditor() {
-        require(auditors[msg.sender] == true);
+        require(auditors[msg.sender] == true, "No es auditor");
         _;
     }
 
     modifier isMaker() {
-        require(makers[msg.sender].id != 0);
+        require(makers[msg.sender].id != 0, "No es maker");
         _;
     }
 
@@ -49,17 +49,18 @@ contract SmartInvestment {
         REQUERIMIENTO ROLES 8 Y 9
     */
     modifier enableProposal() {
-        require(makerIdsCounter >= 3 && auditorIdsCounter >= 2);
+        require(makerIdsCounter >= 3, "No hay mas de 3 makers");
+        require(auditorIdsCounter >= 2, "No hay mas de 2 auditors");
         _;
     }
 
     modifier proposalPeriod() {
-        require(systemState == SystemState.Proposal);
+        require(systemState == SystemState.Proposal, "No se encuentra en proposal period");
         _;
     }
 
     modifier votingPeriod() {
-        require(systemState == SystemState.Voting);
+        require(systemState == SystemState.Voting, "No se encuentra en voting period");
         _;
     }
 
@@ -120,7 +121,7 @@ contract SmartInvestment {
         REQUERIMIENTO PROPUESTAS 2, 4
     */
     function setStateVoting() internal {
-        require(proposalIdsCounter >= 2);
+        require(proposalIdsCounter >= 2, "Se necesitan mas de 2 proposals");
         systemState = SystemState.Voting;
     }
 
@@ -136,9 +137,9 @@ contract SmartInvestment {
         for(uint256 i = 1; i < proposalIdsCounter && totalBalance <= 50 ether; i++) {
             totalBalance += address(proposals[i]).balance;
         }
-        require(totalBalance >= 50 ether);
+        require(totalBalance >= 50 ether, "Se necesita que el total del balance de las propuestas sea mayor a 50");
         bool auditorsAuthorization = votingCloseAuthorizationAuditors[0] != address(0) && votingCloseAuthorizationAuditors[1] != address(0);
-        require(auditorsAuthorization);
+        require(auditorsAuthorization, "Se necesita autorizacion de auditores");
         systemState = SystemState.Closed;
         delete votingCloseAuthorizationAuditors[0];
         delete votingCloseAuthorizationAuditors[1];

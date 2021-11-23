@@ -29,7 +29,7 @@ contract Proposal {
     }
 
     modifier isOwner() {
-        require(_owner == msg.sender);
+        require(_owner == msg.sender, "No es el owner");
         _;
     }
 
@@ -55,10 +55,10 @@ contract Proposal {
         📃 No verificamos que el proposalId exista porque si se llama al método Vote del contrato intel de esta address es xq existe la proposal.
     */
     function vote() external payable {
-        require(msg.value >= 5 ether);
-        require(_audited);
-        require(SmartInvestment(_owner).isVotingPeriod());
-        require(SmartInvestment(_owner).isVoter(msg.sender));
+        require(msg.value >= 5 ether, "Necesita que sean mas de 5 ethers");
+        require(_audited, "Proposal no esta auditada");
+        require(SmartInvestment(_owner).isVotingPeriod(), "No es periodo de votacion");
+        require(SmartInvestment(_owner).isVoter(msg.sender), "No es votante");
         _votes++;
     }
 
