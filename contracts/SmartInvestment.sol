@@ -175,11 +175,11 @@ contract SmartInvestment {
     }
 
     function authorizeCloseVoting() external isAuditor {
-        if (votingCloseAuthorizationAuditors[0] == address(0)) {
-            votingCloseAuthorizationAuditors[0] = msg.sender;
+        if (votingCloseAuthorizationAuditors.length == 0) {
+            votingCloseAuthorizationAuditors.push(msg.sender);
         } else {
             if (votingCloseAuthorizationAuditors[0] != msg.sender) {
-                votingCloseAuthorizationAuditors[1] = msg.sender;
+                votingCloseAuthorizationAuditors.push(msg.sender);
             } else {
                 revert();
             }
