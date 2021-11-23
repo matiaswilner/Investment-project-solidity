@@ -99,7 +99,7 @@ contract SmartInvestment {
         makerIdsCounter++;
     }
 
-    function addAuditor(address newAuditorAddress) external {
+    function addAuditor(address newAuditorAddress) external isOwner {
         auditors[newAuditorAddress] = true;
         auditorIdsCounter++;
     }
@@ -120,7 +120,7 @@ contract SmartInvestment {
         REQUERIMIENTO PROPUESTAS 2, 4
     */
     function setStateVoting() internal {
-        require(proposalIdsCounter > 1);
+        require(proposalIdsCounter >= 2);
         systemState = SystemState.Voting;
     }
 
@@ -136,26 +136,23 @@ contract SmartInvestment {
         for(uint256 i = 1; i < proposalIdsCounter && totalBalance <= 50 ether; i++) {
             totalBalance += address(proposals[i]).balance;
         }
+        require(totalBalance >= 50 ether);
         bool auditorsAuthorization = votingCloseAuthorizationAuditors[0] != address(0) && votingCloseAuthorizationAuditors[1] != address(0);
-        if (totalBalance >= 50 ether && auditorsAuthorization) {
-            systemState = SystemState.Closed;
-            delete votingCloseAuthorizationAuditors[0];
-            delete votingCloseAuthorizationAuditors[1];
-            address proposalWinner = getProposalWinner();
-            for(uint256 i = 1; i < proposalIdsCounter; i++){
-                Proposal(proposals[i]).transferTenPercent();
-                if(proposals[i] != proposalWinner){
-                    Proposal(proposals[i]).transferFundsAndSelfDestroy(proposalWinner);
-                }
+        require(auditorsAuthorization);
+        systemState = SystemState.Closed;
+        delete votingCloseAuthorizationAuditors[0];
+        delete votingCloseAuthorizationAuditors[1];
+        address proposalWinner = getProposalWinner();
+        for(uint256 i = 1; i < proposalIdsCounter; i++){
+            Proposal(proposals[i]).transferTenPercent();
+            if(proposals[i] != proposalWinner){
+                Proposal(proposals[i]).transferFundsAndSelfDestroy(proposalWinner);
             }
-            Proposal proposalWinnerObject = Proposal(proposalWinner);
-            emit DeclareWinningProposalEvent(proposalWinner, proposalWinnerObject._maker(), proposalWinnerObject._minimumInvestment());
-            proposalWinnerObject.transferPropertyToMaker();
-            proposalIdsCounter = 1;
-        } else {
-            revert();
         }
-        
+        Proposal proposalWinnerObject = Proposal(proposalWinner);
+        emit DeclareWinningProposalEvent(proposalWinner, proposalWinnerObject._maker(), proposalWinnerObject._minimumInvestment());
+        proposalWinnerObject.transferPropertyToMaker();
+        proposalIdsCounter = 1;
     }
 
     /*

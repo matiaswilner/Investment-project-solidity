@@ -56,6 +56,7 @@ contract Proposal {
     */
     function vote() external payable {
         require(msg.value >= 5 ether);
+        require(_audited);
         require(SmartInvestment(_owner).isVotingPeriod());
         require(SmartInvestment(_owner).isVoter(msg.sender));
         _votes++;
