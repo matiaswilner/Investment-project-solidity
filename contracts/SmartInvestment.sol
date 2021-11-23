@@ -43,15 +43,6 @@ contract SmartInvestment {
         _;
     }
 
-    
-    modifier isVoter() {
-        // Verificar que no esté en el mapping de Owners, Makers u Auditors (modificar⚠️⚠️⚠️⚠️⚠️⚠️)
-        require(owners[msg.sender] == false);
-        require(auditors[msg.sender] == false);
-        require(makers[msg.sender].id == 0);
-        _;
-    }
-
     // HACER un isSmartInvestment modifier
 
     /*
@@ -77,6 +68,17 @@ contract SmartInvestment {
         systemState = SystemState.Closed;
     }
 
+    function isVoter(address voterAddress) external view returns(bool) {
+        bool notOwner = owners[voterAddress] == false;
+        bool notAuditor = auditors[voterAddress] == false;
+        bool notMaker = makers[voterAddress].id == 0;
+        return notOwner && notAuditor && notMaker;
+    }
+
+    function isVotingPeriod() external view returns(bool) {
+        return systemState == SystemState.Voting;
+    }
+
     /*
         REQUERIMIENTO ROLES 5
         Solo un owner puede agregar otro owner, entonces
@@ -91,7 +93,7 @@ contract SmartInvestment {
         Solo los owners podrán registrar makers, entonces
         debemos usar el modifier isOwner
     */
-    // Al usar memory tiene costo extra, para ahorrar gas, puedo usar calldata (readonly, mas barato)
+    // 📃 Al usar memory tiene costo extra, para ahorrar gas, puedo usar calldata (readonly, mas barato)
     function addMaker(address newMakerAddress, string calldata name, string calldata country, string calldata passportNumber) external isOwner {
         makers[newMakerAddress] = Maker(makerIdsCounter, name, country, passportNumber);
         makerIdsCounter++;
@@ -105,7 +107,7 @@ contract SmartInvestment {
         } else if (systemState == SystemState.Voting) {
             setStateClosed();
         } else {
-            revert();  // Cuidado con el tema del gasto. assert(false) consume toodo el gas, PREFERIBLE USAR REVERT!!⚠️⚠️⚠️⚠️
+            revert();  // 📃 Cuidado con el tema del gasto. assert(false) consume toodo el gas, PREFERIBLE USAR REVERT!!⚠️⚠️⚠️⚠️
         }
     }
 
@@ -115,7 +117,6 @@ contract SmartInvestment {
     function setStateVoting() internal {
         require(proposalIdsCounter > 1);
         systemState = SystemState.Voting;
-        //makerIdsCounter = 1; - PREGUNTAR ESTO
     }
 
     /*
@@ -126,7 +127,6 @@ contract SmartInvestment {
     }
 
     function setStateClosed() internal {
-        // Tenemos que ver como ajustar la logica porque hacemos delete de proposal
         uint256 totalBalance = 0;
         for(uint256 i = 1; i < proposalIdsCounter && totalBalance <= 50 ether; i++) {
             totalBalance += address(proposals[i]).balance;
@@ -147,17 +147,6 @@ contract SmartInvestment {
             emit DeclareWinningProposalEvent(proposalWinner, proposalWinnerObject._maker(), proposalWinnerObject._minimumInvestment());
             proposalWinnerObject.transferPropertyToMaker();
             proposalIdsCounter = 1;
-            // Que onda esto? El ._maker ya es un address.. Hay que ponerle el payable en algun lado para transferir la propiedad del contrato?
-
-            // QUEDAMOS ACÁ??? ⚠️❓❔❓❔🤔
-            /*
-                1 - Transferir 10% del balance de TODOS los contratos al contrato SmartInvestment. (comision)
-                2 - Asignar la plata restante de los contratos perdedores al ganador.
-                3 - Destruir los contratos perdedores. (Usar SELF DESTRUCT y ver como es (puede estar en las clases del 27/oct o 20/oct))
-                4 - Asignar la propiedad del contrato ganador a su owner.
-
-                El contrato ganador en el caso de que haya un empate de votos (por = cantidad de ethers), puede ser cualquiera de los dos.
-            */
         } else {
             revert();
         }
@@ -168,19 +157,15 @@ contract SmartInvestment {
         REQUERIMIENTO PROPUESTAS 7
     */
     function validateProposal(uint256 proposalId) external isAuditor {
-        if (proposals[proposalId] != address(0)) {    // Proposal existe
-            // OPCION 1
+        if (proposals[proposalId] != address(0)) {
             Proposal(proposals[proposalId]).setAudited();
-            // OPCION 2 - En caso de borrar la funcion Proposal.setAudited()
-            //Proposal(proposals[proposalId])._audited = true;
         }
     }
 
     /*
         REQUERIMIENTO ROLES 7
     */
-    function createProposal(string calldata name, string calldata description, uint256 minimumInvestment) external isMaker proposalPeriod {
-        //proposals[proposalIdsCounter] = 
+    function createProposal(string calldata name, string calldata description, uint256 minimumInvestment) external payable isMaker proposalPeriod {
         Proposal newProposal = new Proposal(proposalIdsCounter, false, false, name, description, minimumInvestment, msg.sender);
         address payable newProposalAddress = payable(address(newProposal));
         proposals[proposalIdsCounter] = newProposalAddress;
@@ -200,33 +185,13 @@ contract SmartInvestment {
         
     }
 
-    /* 
-        🧠🧠🧠🧠🧠🧠
-        DOCUMENTAR que lo hicimos así para evitar llamar de un contrato al otro, ya que si
-        estuviera esta func en Proposal deberiamos llamar aca para preguntar por el votingPeriod y
-        si es o no voter el address, además de que un usuario tendría que llamr previamente a
-        una func en SmartInvestment para saber el address de un contrato que no conoce (conocería sólo su Id).
-
-        DEBE ESTAR SIII O SIII EN PROPOSAL y HACER TODDO ESO DE LA LLAMADA EN CONTRATO
-        Desde la propuesta perguntar si esta abierto, sino hace revert, ademas de erificar que no sea un maker ni owner ni auditor.
-    */
-    function vote(uint256 proposalId) external payable isVoter votingPeriod {
-        require(msg.value >= 5 ether);
-        require(proposalId > 0 && proposalId < proposalIdsCounter);
-        proposals[proposalId].transfer(msg.value);
-        Proposal(proposals[proposalId]).addVote();
-        // OPCION 2
-        //Proposal(proposals[proposalId])._votes++;
-        // WARNING: validar que la proposalId existe ⚠️⚠️⚠️⚠️⚠️ - HECHO
-    }
-
     // Documentar que lo resolvimos así y como lo resolvimos
     function getProposalWinner() internal view returns(address){
         address winner = proposals[1];
         for (uint256 i=2; i < proposalIdsCounter; i++) {
             if (proposals[i].balance > winner.balance) {
                 winner = proposals[i];
-            } else if (proposals[i].balance == winner.balance && Proposal(proposals[i]).getVotes() > Proposal(winner).getVotes()) {
+            } else if (proposals[i].balance == winner.balance && Proposal(proposals[i])._votes() > Proposal(winner)._votes()) {
                 winner = proposals[i];
             }
         }
