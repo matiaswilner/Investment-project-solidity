@@ -107,7 +107,7 @@ contract SmartInvestment {
         auditorIdsCounter++;
     }
 
-    function switchState() payable external isOwner {
+    function switchState() external isOwner {
         if (systemState == SystemState.Proposal) {
             setStateVoting();
         } else if (systemState == SystemState.Closed) {
