@@ -6,7 +6,7 @@ beforeEach(async function() {
   contractInstance = await contractFactory.deploy();
 });
 
-describe("Deploy test", async function() {
+describe("========DEPLOY TEST======== Proposal State", async function() {
   it("SmartInvestment deployed", async function() {
     expect(contractInstance).to.be.ok;
   });
