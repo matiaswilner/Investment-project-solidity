@@ -7,7 +7,7 @@ beforeEach(async function() {
   contractInstance = await contractFactory.deploy();
 });
 
-describe("Deploy test Vote", async function() {
+describe("========DEPLOY TEST======== Vote", async function() {
   it("SmartInvestment deployed", async function() {
     expect(contractInstance).to.be.ok;
   });
@@ -85,16 +85,55 @@ describe("Vote", async function() {
       expect(error.message).to.contain("No es periodo de votacion");
     }
   });
-  /*it("should succeed", async function() {
-    const [owner, addr1, addr2, addr3, addr4, addr5] = await ethers.getSigners();
-    await contractInstance.addMaker(addr1.address, "Maker1", "UY", "385738964");
-    await contractInstance.addMaker(addr2.address, "Maker2", "US", "4634632");
-    await contractInstance.addMaker(addr3.address, "Maker3", "AR", "345734573");
+  it("should fail because it isn´t a voter", async function() {
+    await contractInstance.addMaker(addr1.address, "Maker 1", "UY", "24121321");
+    await contractInstance.addMaker(addr2.address, "Maker 2", "UY", "532342");
+    await contractInstance.addMaker(addr3.address, "Maker 3", "UY", "5423542");
     await contractInstance.addAuditor(addr4.address);
     await contractInstance.addAuditor(addr5.address);
     await contractInstance.switchState();
-    const val = await contractInstance.systemState();
-    expect(val.toString()).to.be.equal('1');  // 1 = Proposal enum
-  });*/
+    await contractInstance.connect(addr1).createProposal("Proposal 1", "Description", 5);
+    await contractInstance.connect(addr2).createProposal("Proposal 2", "Description", 4);
+    await contractInstance.switchState();
+
+    const proposalAddress = await contractInstance.proposals(1);
+
+    contractInstance.connect(addr4).validateProposal(1);
+
+    const contractFactoryProp = await ethers.getContractFactory("Proposal");
+    proposal = await contractFactoryProp.attach(proposalAddress);
+    
+
+
+    try {
+      await proposal.connect(addr2).vote({ value : ethers.utils.parseEther("6") });
+      expect.fail("Should have thrown exception 'No es votante'");
+    }
+    catch (error) {
+      expect(error.message).to.contain("No es votante");
+    }
+  });
+  it("should succeed", async function() {
+    await contractInstance.addMaker(addr1.address, "Maker 1", "UY", "24121321");
+    await contractInstance.addMaker(addr2.address, "Maker 2", "UY", "532342");
+    await contractInstance.addMaker(addr3.address, "Maker 3", "UY", "5423542");
+    await contractInstance.addAuditor(addr4.address);
+    await contractInstance.addAuditor(addr5.address);
+    await contractInstance.switchState();
+    await contractInstance.connect(addr1).createProposal("Proposal 1", "Description", 5);
+    await contractInstance.connect(addr2).createProposal("Proposal 2", "Description", 4);
+    await contractInstance.switchState();
+
+    const proposalAddress = await contractInstance.proposals(1);
+
+    contractInstance.connect(addr4).validateProposal(1);
+
+    const contractFactoryProp = await ethers.getContractFactory("Proposal");
+    proposal = await contractFactoryProp.attach(proposalAddress);
+
+    await proposal.connect(addr6).vote({ value : ethers.utils.parseEther("6") });
+    const val = await proposal._votes();
+    expect(val.toString()).to.be.equal('1');  // 1 vote
+  });
 });
 
