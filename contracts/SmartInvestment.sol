@@ -147,15 +147,21 @@ contract SmartInvestment {
         delete votingCloseAuthorizationAuditors[1];
         address proposalWinner = getProposalWinner();
         Proposal(proposalWinner).transferTenPercent();
+        uint256 proposalWinnerId;
         for(uint256 i = 1; i < proposalIdsCounter; i++){
             if(proposals[i] != proposalWinner){
                 Proposal(proposals[i]).transferTenPercent();
                 Proposal(proposals[i]).transferFundsAndSelfDestroy(proposalWinner);
+                delete proposals[i];
+            }
+            else {
+                proposalWinnerId = i;
             }
         }
         Proposal proposalWinnerObject = Proposal(proposalWinner);
         emit DeclareWinningProposalEvent(proposalWinner, proposalWinnerObject._maker(), proposalWinnerObject._minimumInvestment());
         proposalWinnerObject.transferPropertyToMaker();
+        delete proposals[proposalWinnerId];
         proposalIdsCounter = 1;
     }
 
