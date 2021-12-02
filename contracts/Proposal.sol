@@ -5,7 +5,6 @@ import "./SmartInvestment.sol";
 
 contract Proposal {
 
-    // Ponerlas public, no hacer getters y setters
     address payable private _owner;
 
     uint256 public _id;
@@ -36,8 +35,7 @@ contract Proposal {
     function transferPropertyToMaker() external isOwner {
         _owner = _maker;
     }
-
-    // OPCION 2  
+ 
     function transferFundsAndSelfDestroy(address destinationAddress) payable external isOwner {
         selfdestruct(payable(destinationAddress));
     }
@@ -50,13 +48,6 @@ contract Proposal {
         }
     }
 
-    /* 
-        DEBE ESTAR SIII O SIII EN PROPOSAL y HACER TODDO ESO DE LA LLAMADA EN CONTRATO
-        Desde la propuesta perguntar si esta abierto, sino hace revert, ademas de erificar que no sea un maker ni owner ni auditor.
-
-        📃 Asumimos que siempre que se llama al vote el Owner va a ser el SmartInvestment
-        📃 No verificamos que el proposalId exista porque si se llama al método Vote del contrato intel de esta address es xq existe la proposal.
-    */
     function vote() external payable {
         require(msg.value >= 5 ether, "Necesita que sean mas de 5 ethers");
         require(_audited, "Proposal no esta auditada");

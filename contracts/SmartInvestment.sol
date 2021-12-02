@@ -8,7 +8,7 @@ contract SmartInvestment {
     receive() external payable {}
 
     enum SystemState { Closed, Proposal, Voting }
-    SystemState public systemState; // Estado actual del sistema
+    SystemState public systemState;
 
     event DeclareWinningProposalEvent(address proposalAddress, address maker, uint256 minimumInvestment);
 
@@ -47,9 +47,6 @@ contract SmartInvestment {
 
     // HACER un isSmartInvestment modifier
 
-    /*
-        REQUERIMIENTO ROLES 8 Y 9
-    */
     modifier enableProposal() {
         require(makerIdsCounter >= 3, "No hay mas de 3 makers");
         require(auditorIdsCounter >= 2, "No hay mas de 2 auditors");
@@ -82,21 +79,10 @@ contract SmartInvestment {
         return systemState == SystemState.Voting;
     }
 
-    /*
-        REQUERIMIENTO ROLES 5
-        Solo un owner puede agregar otro owner, entonces
-        debemos usar el modifier isOwner.
-    */
     function addOwner(address newOwnerAddress) external isOwner {
         owners[newOwnerAddress] = true;
     }
 
-    /*
-        REQUERIMIENTO ROLES 6
-        Solo los owners podrán registrar makers, entonces
-        debemos usar el modifier isOwner
-    */
-    // 📃 Al usar memory tiene costo extra, para ahorrar gas, puedo usar calldata (readonly, mas barato)
     function addMaker(address newMakerAddress, string calldata name, string calldata country, string calldata passportNumber) external isOwner {
         makers[newMakerAddress] = Maker(makerIdsCounter, name, country, passportNumber);
         makerIdsCounter++;
@@ -115,21 +101,15 @@ contract SmartInvestment {
         } else if (systemState == SystemState.Voting) {
             setStateClosed();
         } else {
-            revert();  // 📃 Cuidado con el tema del gasto. assert(false) consume toodo el gas, PREFERIBLE USAR REVERT!!⚠️⚠️⚠️⚠️
+            revert();
         }
     }
 
-    /*
-        REQUERIMIENTO PROPUESTAS 2, 4
-    */
     function setStateVoting() internal {
         require(proposalIdsCounter >= 2, "Se necesitan mas de 2 proposals");
         systemState = SystemState.Voting;
     }
 
-    /*
-        REQUERIMIENTO PROPUESTAS 1, 3
-    */
     function setStateProposal() internal enableProposal {
         systemState = SystemState.Proposal;
     }
@@ -165,18 +145,12 @@ contract SmartInvestment {
         proposalIdsCounter = 1;
     }
 
-    /*
-        REQUERIMIENTO PROPUESTAS 7
-    */
     function validateProposal(uint256 proposalId) external isAuditor {
         if (proposals[proposalId] != address(0)) {
             Proposal(proposals[proposalId]).setAudited();
         }
     }
 
-    /*
-        REQUERIMIENTO ROLES 7
-    */
     function createProposal(string calldata name, string calldata description, uint256 minimumInvestment) external payable isMaker proposalPeriod {
         Proposal newProposal = new Proposal(proposalIdsCounter, false, false, name, description, minimumInvestment, msg.sender);
         address payable newProposalAddress = payable(address(newProposal));
@@ -197,7 +171,6 @@ contract SmartInvestment {
         
     }
 
-    // Documentar que lo resolvimos así y como lo resolvimos
     function getProposalWinner() internal view returns(address){
         address winner = proposals[1];
         for (uint256 i=2; i < proposalIdsCounter; i++) {
