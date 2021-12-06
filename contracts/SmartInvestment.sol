@@ -45,8 +45,6 @@ contract SmartInvestment {
         _;
     }
 
-    // HACER un isSmartInvestment modifier
-
     modifier enableProposal() {
         require(makerIdsCounter >= 3, "No hay mas de 3 makers");
         require(auditorIdsCounter >= 2, "No hay mas de 2 auditors");

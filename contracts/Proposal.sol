@@ -56,7 +56,7 @@ contract Proposal {
         _votes++;
     }
 
-    function setAudited() external {
+    function setAudited() external isOwner {
         _audited = true;
     }
 }
